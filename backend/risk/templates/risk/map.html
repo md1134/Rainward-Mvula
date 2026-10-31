@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mvula live map</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
+<style>
+:root{--low:#2e9e5b;--med:#f2a541;--high:#d64545}
+body{margin:0;font-family:system-ui,sans-serif;display:flex;flex-direction:column;height:100vh}
+header{background:#0b3c5d;color:#fff;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px}
+header b{font-size:18px}header a{color:#bfe3f5}
+main{flex:1;display:flex;min-height:0}
+#map{flex:1}
+aside{width:300px;overflow-y:auto;padding:10px;background:#f6f9fb;border-left:1px solid #d5e0e6;font-size:14px}
+.card{background:#fff;border:1px solid #d5e0e6;border-radius:8px;padding:8px;margin-bottom:8px}
+.pill{display:inline-block;padding:1px 8px;border-radius:10px;color:#fff;font-size:12px;margin-right:4px}
+.LOW{background:var(--low)}.MEDIUM{background:var(--med);color:#222}.HIGH{background:var(--high)}
+h4{margin:8px 0 4px}small{color:#555}
+@media(max-width:700px){main{flex-direction:column}aside{width:auto;height:40%;border-left:0}}
+</style></head><body>
+<header><b>Mvula: Lusaka live risk map</b><span>Updates every 5s &middot; <a href="/demo/" target="_blank">Open chat demo</a></span></header>
+<main><div id="map"></div><aside><h4>Areas</h4><div id="areas"></div><h4>Latest reports</h4><div id="recent"></div>
+<small>Community reports are unverified until cross-checked. Schedules shown are placeholders until real notices are loaded.</small></aside></main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script>
+const map=L.map('map').setView([-15.42,28.29],12);
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap contributors',maxZoom:18}).addTo(map);
+const COL={LOW:'#2e9e5b',MEDIUM:'#f2a541',HIGH:'#d64545'},RANK={LOW:0,MEDIUM:1,HIGH:2};
+const layers={};
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+async function refresh(){
+ let j;try{j=await (await fetch('/api/map/')).json()}catch(e){return}
+ const box=document.getElementById('areas');box.innerHTML='';
+ j.areas.forEach(a=>{
+  const worst=RANK[a.flood]>=RANK[a.water]?a.flood:a.water;
+  const rep=Object.entries(a.reports).map(([k,v])=>esc(k.replace('_',' '))+' x'+v).join(', ')||'none';
+  const html=`<b>${esc(a.name)}</b><br><span class="pill ${a.flood}">Flood ${a.flood}</span><span class="pill ${a.water}">Water ${a.water}</span><br><small>Rain next 24h: ${a.rain_mm} mm (${esc(a.rain_source)})<br>Reports: ${rep}</small>`;
+  if(!layers[a.id]){layers[a.id]=L.circleMarker([a.lat,a.lng],{radius:22,weight:2,fillOpacity:.55}).addTo(map).bindPopup(html)}
+  layers[a.id].setStyle({color:COL[worst],fillColor:COL[worst]});layers[a.id].setPopupContent(html);
+  const c=document.createElement('div');c.className='card';c.innerHTML=html;c.onclick=()=>{map.setView([a.lat,a.lng],14);layers[a.id].openPopup()};box.appendChild(c);
+ });
+ document.getElementById('recent').innerHTML=j.recent.map(r=>`<div class="card">${esc(r.kind)} in <b>${esc(r.area)}</b><br><small>${esc(r.at)} &middot; ${esc(r.status)}</small></div>`).join('')||'<small>No reports yet</small>';
+}
+refresh();setInterval(refresh,5000);
+</script></body></html>

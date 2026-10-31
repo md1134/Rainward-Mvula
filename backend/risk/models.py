@@ -7,16 +7,31 @@ class Area(models.Model):
     name = models.CharField(max_length=120, unique=True)
     latitude = models.FloatField()
     longitude = models.FloatField()
+    flood_prone = models.BooleanField(default=False)  # low-lying / poor drainage
 
     def __str__(self):
         return self.name
+
+
+class Schedule(models.Model):
+    """Published power-cut or water-rationing window for an area (entered manually for now)."""
+
+    class Kind(models.TextChoices):
+        POWER = "power", "Power cut (ZESCO)"
+        WATER = "water", "Water supply (Lusaka Water)"
+
+    area = models.ForeignKey(Area, on_delete=models.CASCADE, related_name="schedules")
+    kind = models.CharField(max_length=8, choices=Kind.choices)
+    window = models.CharField(max_length=120)  # e.g. "Mon, Wed, Fri 06:00-10:00"
+
+    def __str__(self):
+        return f"{self.area} {self.kind}: {self.window}"
 
 
 class RiskScore(models.Model):
     class Hazard(models.TextChoices):
         FLOOD = "flood", "Flood"
         WATER = "water", "Water shortage"
-        DRY_SPELL = "dry_spell", "Dry spell"
 
     area = models.ForeignKey(Area, on_delete=models.CASCADE, related_name="scores")
     hazard = models.CharField(max_length=16, choices=Hazard.choices)

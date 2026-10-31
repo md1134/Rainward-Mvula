@@ -57,17 +57,32 @@ docs/         proposal and design documents
 ```bash
 python -m venv venv && source venv/bin/activate
 pip install -r backend/requirements.txt
-cp backend/.env.example backend/.env   # then edit values
 cd backend
 python manage.py migrate
+python manage.py seed_areas          # Lusaka compounds with PLACEHOLDER schedules
 python manage.py runserver
 ```
 
+| URL | What it is |
+|---|---|
+| `/` | Live risk map (refreshes every 5 s) |
+| `/demo/` | Browser chat simulator, so you can demo the bot without a WhatsApp number |
+| `/api/map/` | JSON risk scores and recent reports |
+| `/api/reports/` | `POST {kind, area}` creates an unreviewed report |
+| `/webhook/whatsapp/` | Meta WhatsApp Cloud API webhook (set `WHATSAPP_*` variables) |
+| `/admin/` | Review reports (confirm or reject); create a user with `createsuperuser` |
+
+Run the tests with `python manage.py test`.
+
+**Demo tip:** set `DEMO_RAIN_MM=45` before `runserver` to force a heavy-rain scenario. Without it, the app fetches the 24 h rainfall forecast from Open-Meteo for each area.
+
 Secrets live in environment variables or `.env` (git-ignored). Never commit keys.
 
-## Status
+## Status (MVP)
 
-Early scaffold: project structure and core data models are in place. Next: WhatsApp webhook, weather and schedule ingestion, risk scoring, live map.
+Working: area subscription and status over chat, hourly-style risk scoring (flood from forecast rain, drainage and flood reports; water from dry-tap and burst-pipe reports), community reports that update the map, admin review, WhatsApp webhook, consent and data deletion (`STOP`).
+
+Not yet: real ZESCO and Lusaka Water schedules (placeholders), photo reports, Nyanja and Bemba, PostGIS, the farm module, scheduled hourly alert push.
 
 ## Team 1
 
